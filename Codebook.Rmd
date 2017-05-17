@@ -1,0 +1,90 @@
+---
+title: "Codebook"
+author: "Asimabha Sarkar"
+date: "May 17, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+#1.Download the file and put the file in the data folder
+if(!file.exists("G:/Getting and Cleaning/ProjectN/data")){dir.create("G:/Getting and Cleaning/ProjectN/data")}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip" 
+download.file(fileUrl,destfile="G:/Getting and Cleaning/ProjectN/data/Dataset.zip",method="auto")
+unzip(zipfile="G:/Getting and Cleaning/ProjectN/data/Dataset.zip",exdir="G:/Getting and Cleaning/ProjectN/data")
+
+
+# Reading Training tables:
+x_train <- read.table("G:/Getting and Cleaning/ProjectN/data/UCI HAR Dataset/train/X_train.txt")
+y_train <- read.table("G:/Getting and Cleaning/ProjectN/data/UCI HAR Dataset/train/y_train.txt")
+subject_train <-read.table("G:/Getting and Cleaning/ProjectN/data/UCI HAR Dataset/train/subject_train.txt")
+
+# Reading Test tables:
+x_test <- read.table("G:/Getting and Cleaning/ProjectN/data/UCI HAR Dataset/test/X_test.txt")
+y_test <- read.table("G:/Getting and Cleaning/ProjectN/data/UCI HAR Dataset/test/y_test.txt")
+subject_test <- read.table("G:/Getting and Cleaning/ProjectN/data/UCI HAR Dataset/test/subject_test.txt")
+
+# Reading Fearure Vector:
+features <- read.table("G:/Getting and Cleaning/ProjectN/data/UCI HAR Dataset/features.txt")
+
+# Reading Activity Labels:
+activityType <- read.table("G:/Getting and Cleaning/ProjectN/data/UCI HAR Dataset/activity_labels.txt")
+
+# Assigning the column names of "Train and Test tables"
+colnames(x_train) <- features[, 2]
+colnames(y_train) <- "activityId"
+colnames(subject_train) <- "subjectId"
+
+colnames(x_test) <- features[, 2]
+colnames(y_test) <- "activityId"
+colnames(subject_test) <- "subjectId"
+
+colnames(activityType) <- c('activityId', 'activityType')
+
+# Merges training and the tset sets to create one dataset
+merge_train <- cbind(y_train,subject_train,x_train)
+merge_test <- cbind(y_test,subject_test,x_test)
+OneData <- rbind(merge_train,merge_test)
+
+# Extract only the measurements on the mean and standard deviation for each measurement. 
+# Read colnames
+colNames <- colnames(OneData)
+
+
+# Create a logicalVector that contains TRUE values for the ID, mean() & stddev() columns and FALSE for others
+
+#meanOstd = (grepl("activity..",colNames) | grepl("subject..",colNames) | grepl("-mean..",colNames) & !grepl("-meanFreq..",colNames) & !grepl("mean..-",colNames) | grepl("-std..",colNames) & !grepl("-std()..-",colNames));
+
+meanOstd <- (grepl("activityId" , colNames) | 
+                 grepl("subjectId" , colNames) | 
+                 grepl("mean.." , colNames) | 
+                 grepl("std.." , colNames) 
+                 )
+
+
+# Creating subset from 'OneData' only with 'meanOstd'
+FinalData <- OneData[, meanOstd == TRUE]
+
+
+# Appropriately labels the data set with descriptive variable names
+ActivityNames_set <- merge(FinalData, activityType, by = 'activityId', all.X = TRUE)
+
+
+# Merging the tidyData with activityType to include descriptive acitvity names
+
+tidyDataSet <- aggregate(. ~subjectId + activityId, ActivityNames_set, mean)
+tidyDataSet <- tidyDataSet[order(tidyDataSet$subjectId, tidyDataSet$activityId),]
+
+
+
+
+# Export the tidyData set 
+write.table(tidyDataSet, 'G:/Getting and Cleaning/ProjectN/tidyDataSet.txt',row.names=TRUE,sep='\t');
